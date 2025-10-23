@@ -16,5 +16,15 @@ namespace File_Explorer
         {
             InitializeComponent();
         }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void FileExplorer_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }
