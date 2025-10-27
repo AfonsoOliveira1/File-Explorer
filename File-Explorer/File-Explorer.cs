@@ -33,7 +33,7 @@ namespace File_Explorer
             tree.Dock = DockStyle.Fill;
             panelTree.Controls.Add(tree);
             novaAba.Controls.Add(panelTree);
-
+            string path;
             //list
             Panel panelList = new Panel();
             panelList.Dock = DockStyle.Fill;
