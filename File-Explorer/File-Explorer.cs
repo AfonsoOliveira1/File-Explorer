@@ -14,6 +14,8 @@ namespace File_Explorer
 {
     public partial class FileExplorer : Form
     {
+        public List<string> pathsTodos = new List<string>();
+        int indexpath = -1;
         public FileExplorer()
         {
             InitializeComponent();
@@ -33,7 +35,7 @@ namespace File_Explorer
             tree.Dock = DockStyle.Fill;
             panelTree.Controls.Add(tree);
             novaAba.Controls.Add(panelTree);
-            string path;
+
             //list
             Panel panelList = new Panel();
             panelList.Dock = DockStyle.Fill;
@@ -54,6 +56,7 @@ namespace File_Explorer
                 node.Tag = drive;
                 node.Nodes.Add("Loading...");
                 tvMain.Nodes.Add(node);
+                node.ImageIndex = node.SelectedImageIndex = 3;
             }
         }
         public string Tamanhos(long tamanho)
@@ -75,9 +78,24 @@ namespace File_Explorer
             }
             return tamanho + " bytes";
         }
+        private TreeNode FindNodeByTag(TreeNodeCollection nodes, string tag)
+        {
+            foreach (TreeNode node in nodes)
+            {
+                if (node.Tag?.ToString().Equals(tag, StringComparison.OrdinalIgnoreCase) == true)//sem diff em maiusculas e minusculas
+                    return node;
+
+                var found = FindNodeByTag(node.Nodes, tag);//recursão bem boa para todos os niveis da treeNode
+                if (found != null)
+                    return found;
+            }
+            return null;
+        }
         private void FileExplorer_Load(object sender, EventArgs e)
         {
             PopularTreeView();
+            lblItens.Text = "";
+            lblItensSelected.Text = "";
         }
 
         private void tvMain_BeforeExpand(object sender, TreeViewCancelEventArgs e)
@@ -92,6 +110,8 @@ namespace File_Explorer
                     TreeNode subNode = new TreeNode(Path.GetFileName(directory));
                     subNode.Tag = directory;
                     subNode.Nodes.Add("Loading...");
+                    if(subNode.Level != 0)
+                        subNode.ImageIndex = node.SelectedImageIndex = 0;
                     node.Nodes.Add(subNode);
                 }
             }
@@ -114,7 +134,20 @@ namespace File_Explorer
                     ListViewItem item = new ListViewItem(Path.GetFileName(file));
                     item.Tag = file;
                     item.SubItems.Add(new FileInfo(file).LastWriteTime.ToString());
-                    item.SubItems.Add(new FileInfo(file).Extension.ToString());
+                    string ext = new FileInfo(file).Extension.ToString();
+                    item.SubItems.Add(ext);
+                    if(ext== ".txt")
+                    {
+                        item.ImageIndex = 1;
+                    }
+                    else if(ext == ".png" || ext == ".jpg" || ext == ".gif")
+                    {
+                        item.ImageIndex = 2;
+                    }
+                    else if(ext == ".zip" || ext == ".rar")
+                    {
+                        item.ImageIndex = 4;
+                    }
                     string size = Tamanhos(new FileInfo(file).Length).ToString();
                     item.SubItems.Add(size);
                     lvMain.Items.Add(item);
@@ -134,8 +167,9 @@ namespace File_Explorer
                     ListViewItem item = new ListViewItem(dir.Name);
                     item.Tag = directorie;
                     item.SubItems.Add(new DirectoryInfo(directorie).LastWriteTime.ToString());
-                    item.SubItems.Add(new DirectoryInfo(directorie).Extension.ToString());
+                    item.SubItems.Add("Pasta de ficheiros");
                     item.SubItems.Add("");
+                    item.ImageIndex = 0;
                     lvMain.Items.Add(item);
                 }
             }
@@ -191,18 +225,47 @@ namespace File_Explorer
                     File.Delete(path);
                 if(Directory.Exists(path))
                     Directory.Delete(path, true);
+                lvMain.Items.Remove(item);
+                var tn = FindNodeByTag(tvMain.Nodes, path);
+                if(tn != null)
+                tvMain.Nodes.Remove(tn);
             }
         }
 
         private void pbRename_Click(object sender, EventArgs e)
         {
+            if(lvMain.SelectedItems.Count > 0)
+            {
+                ListViewItem item = lvMain.SelectedItems[0];
+                lvMain.LabelEdit = true;
+                item.BeginEdit();
+                string path = lvMain.SelectedItems[0].Tag.ToString();
+                try
+                {
+                    if (File.Exists(path))
+                    {
 
+                    }
+                    else if (Directory.Exists(path))
+                    {
+
+                    }
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show("Um Erro ocorreu com " + ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
         }
 
         private void lvMain_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if(lvMain.SelectedItems.Count == 1)
+            if(lvMain.SelectedItems.Count > 0)
             {
+                txtPath.Text = lvMain.SelectedItems[0].Tag.ToString();
+                if(lvMain.SelectedItems.Count == 1)
+                    lblItensSelected.Text = "1 item selecionado |";
+                else lblItensSelected.Text = lvMain.SelectedItems.Count + " itens selecionados |";
                 pbRemove.Enabled = true;
                 pbRename.Enabled = true;
             }
@@ -211,6 +274,86 @@ namespace File_Explorer
                 pbRename.Enabled = false;
                 pbRemove.Enabled = false;
             }
+        }
+
+        private void txtPath_KeyDown(object sender, KeyEventArgs e)
+        {
+            if(e.KeyCode == Keys.Enter)
+            {
+                string path = txtPath.Text;
+                TreeNode node = FindNodeByTag(tvMain.Nodes, path);
+
+                if (node != null)
+                {
+                    tvMain.SelectedNode = node;
+                    node.EnsureVisible();
+                    node.Expand();
+                }
+
+                foreach (ListViewItem item in lvMain.Items)
+                {
+                    if (item.Tag?.ToString() == path)
+                    {
+                        item.Selected = true;
+                        item.EnsureVisible();
+                        lvMain.Focus();
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void tvMain_AfterSelect_1(object sender, TreeViewEventArgs e)
+        {
+            int count = 0;
+            TreeNode node = e.Node;
+            try
+            {
+                string[] directories = Directory.GetDirectories(node.Tag.ToString());
+                foreach (var directorie in directories)
+                {
+                    count++;
+                }
+                lblItens.Text = count + " itens |";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Um Erro ocorreu com " + ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            txtPath.Text = tvMain.SelectedNode.Tag.ToString();
+            pathsTodos.Add(txtPath.Text);
+            indexpath++;
+            updateButoes();
+        }
+
+        private void btnAnterior_Click(object sender, EventArgs e)
+        {
+            indexpath--;
+            atualNode(pathsTodos[indexpath]);
+            updateButoes();
+        }
+
+        private void btnDepois_Click(object sender, EventArgs e)
+        {
+            indexpath++;
+            atualNode(pathsTodos[indexpath]);
+            updateButoes();
+        }
+
+        private void atualNode(string path)
+        {
+            var node = FindNodeByTag(tvMain.Nodes, path);
+            if (node != null)
+            {
+                tvMain.SelectedNode = node;
+                node.EnsureVisible();
+                txtPath.Text = path;
+            }
+        }
+        private void updateButoes()
+        {
+            btnAnterior.Enabled = indexpath > 0;
+            btnDepois.Enabled = indexpath < pathsTodos.Count - 1;
         }
     }
 }
