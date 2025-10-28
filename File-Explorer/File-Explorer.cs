@@ -20,32 +20,23 @@ namespace File_Explorer
         {
             InitializeComponent();
         }
-        public void CriarTab(TabPage aba)
+        private void CloneTabContent(TabPage source, TabPage destination)
         {
-            TabPage novaAba = new TabPage();
+            foreach (Control ctrl in source.Controls)
+            {
+                Control copy = (Control)Activator.CreateInstance(ctrl.GetType());
 
-            Panel panelCima = new Panel();
-            panelCima.Dock = DockStyle.Top;
-            novaAba.Controls.Add(panelCima);
-    
-            //tree
-            Panel panelTree = new Panel();
-            panelTree.Dock = DockStyle.Left;
-            TreeView tree = new TreeView();
-            tree.Dock = DockStyle.Fill;
-            panelTree.Controls.Add(tree);
-            novaAba.Controls.Add(panelTree);
+                copy.Name = ctrl.Name;
+                copy.Text = ctrl.Text;
+                copy.Size = ctrl.Size;
+                copy.Location = ctrl.Location;
+                copy.Anchor = ctrl.Anchor;
+                copy.Dock = ctrl.Dock;
 
-            //list
-            Panel panelList = new Panel();
-            panelList.Dock = DockStyle.Fill;
-            ListView list = new ListView();
-            list.Dock = DockStyle.Fill;
-            panelList.Controls.Add(list);
-            novaAba.Controls.Add(panelList);
-
-            tcMain.TabPages.Insert(tcMain.TabPages.Count - 1,novaAba);
-            tcMain.SelectedTab = novaAba;
+                destination.Controls.Add(copy);
+                tcMain.TabPages.Add(destination);
+                destination.Focus();
+            }
         }
         public void PopularTreeView()
         {
@@ -204,15 +195,8 @@ namespace File_Explorer
 
             if(tcMain.SelectedTab.Text == "+")
             {
-                if (tcMain.TabPages.Count > 1)
-                {
-                    TabPage abaAnterior = tcMain.TabPages[tcMain.TabPages.Count - 1];
-                    CriarTab(abaAnterior);
-                }
-                else
-                {
-                    
-                }
+                TabPage abaNova = new TabPage("File Explorer");
+                CloneTabContent(tcMain.TabPages[tcMain.TabPages.Count - 1], abaNova);
             }
         }
 
@@ -240,15 +224,18 @@ namespace File_Explorer
                 lvMain.LabelEdit = true;
                 item.BeginEdit();
                 string path = lvMain.SelectedItems[0].Tag.ToString();
+                string newpath = new FileInfo(path).Directory.ToString() + $"\\{item.Text}";
                 try
                 {
                     if (File.Exists(path))
                     {
-
+                        File.Move(path, newpath);
+                        item.Tag = newpath;
                     }
                     else if (Directory.Exists(path))
                     {
-
+                        Directory.Move(path, newpath);
+                        item.Tag = newpath;
                     }
                 }
                 catch(Exception ex)
@@ -265,6 +252,7 @@ namespace File_Explorer
                 txtPath.Text = lvMain.SelectedItems[0].Tag.ToString();
                 if(lvMain.SelectedItems.Count == 1)
                     lblItensSelected.Text = "1 item selecionado |";
+                else if(lvMain.SelectedItems.Count == 0) lblItensSelected.Text = "";
                 else lblItensSelected.Text = lvMain.SelectedItems.Count + " itens selecionados |";
                 pbRemove.Enabled = true;
                 pbRename.Enabled = true;
