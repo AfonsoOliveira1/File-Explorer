@@ -223,25 +223,6 @@ namespace File_Explorer
                 ListViewItem item = lvMain.SelectedItems[0];
                 lvMain.LabelEdit = true;
                 item.BeginEdit();
-                string path = lvMain.SelectedItems[0].Tag.ToString();
-                string newpath = new FileInfo(path).Directory.ToString() + $"\\{item.Text}";
-                try
-                {
-                    if (File.Exists(path))
-                    {
-                        File.Move(path, newpath);
-                        item.Tag = newpath;
-                    }
-                    else if (Directory.Exists(path))
-                    {
-                        Directory.Move(path, newpath);
-                        item.Tag = newpath;
-                    }
-                }
-                catch(Exception ex)
-                {
-                    MessageBox.Show("Um Erro ocorreu com " + ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
             }
         }
 
@@ -342,6 +323,43 @@ namespace File_Explorer
         {
             btnAnterior.Enabled = indexpath > 0;
             btnDepois.Enabled = indexpath < pathsTodos.Count - 1;
+        }
+
+        private void lvMain_AfterLabelEdit(object sender, LabelEditEventArgs e)
+        {
+            if (e.Label == null)
+                return;
+
+            ListViewItem item = lvMain.Items[e.Item];
+            string oldPath = item.Tag.ToString();
+            string directory = Path.GetDirectoryName(oldPath);
+            string newPath = Path.Combine(directory, e.Label);
+
+            try
+            {
+                if (File.Exists(newPath) || Directory.Exists(newPath))
+                {
+                    MessageBox.Show("Já existe um ficheiro/pasta com esse nome.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    e.CancelEdit = true;
+                    return;
+                }
+
+                if (File.Exists(oldPath))
+                {
+                    File.Move(oldPath, newPath);
+                }
+                else if (Directory.Exists(oldPath))
+                {
+                    Directory.Move(oldPath, newPath);
+                }
+
+                item.Tag = newPath;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ocorreu um erro: " + ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                e.CancelEdit = true;
+            }
         }
     }
 }
